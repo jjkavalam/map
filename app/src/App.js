@@ -9,9 +9,19 @@ class App extends Component {
       <div className="App">
         <HexagonalMesh sideLen={10} center={{x: 50, y: 50}} g={{
           "a": {
-            0: "b"
+            2: "b"
           },
-          "b": {}
+          "b": {
+            5: "a",
+            2: "c"
+          },
+          "c": {
+            5: "b",
+            1: "d"
+          },
+          "d": {
+            4: "c"
+          }
         }} />
       </div>
     );
