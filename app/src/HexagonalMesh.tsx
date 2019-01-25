@@ -1,4 +1,5 @@
 import React from 'react';
+import {CellId, Neighbours, Cell} from "./Model";
 
 /**
  * Renders a mesh of hexagons using SVG
@@ -36,7 +37,13 @@ function polarToCartesian(center, r, theta) {
     }
 }
 
-export default class HexagonalMesh extends React.Component {
+type Props = {
+    sideLen: number,
+    center: {x: number, y: number},
+    cells: Array<Cell>
+};
+
+export default class HexagonalMesh extends React.Component<Props> {
 
     get sideLen() {
         return this.props.sideLen;
@@ -46,8 +53,8 @@ export default class HexagonalMesh extends React.Component {
         return this.props.center;
     }
 
-    get g() {
-        return this.props.g;
+    get cells() {
+        return this.props.cells;
     }
 
     /**
@@ -79,19 +86,19 @@ export default class HexagonalMesh extends React.Component {
      *  `vertex, graph, visited-set` as arguments
      * @returns aggregated list of values returned by each `fn` invocation
      */
-    renderMesh(g, start) {
+    renderMesh(g: Map<CellId, Neighbours>, start: CellId) {
         const q = [{
             id: start,
             center: this.center
         }];
-        const visited = new Set();
+        const visited: Set<CellId> = new Set();
         const results = [];
 
         while (q.length > 0) {
             const { id, center } = q.shift();
 
-            const neighs = g[id];
-            const hasNoNeigh = (sideIdx) => !neighs.hasOwnProperty(sideIdx);
+            const neighs = g.get(id);
+            const hasNoNeigh = (sideIdx) => !neighs[sideIdx];
             const isNotVisitedNeigh = (sideIdx) => !visited.has(neighs[sideIdx]);
 
             // Sides shared with already visited cells are not rendered 
@@ -105,13 +112,13 @@ export default class HexagonalMesh extends React.Component {
 
             // add not visited neighbours to the queue
             // calculate center of the neighbour relative to current cell's center
-            Object.entries(g[id])
+            Object.entries(neighs)
                 .filter(([_, neigh]) => !visited.has(neigh))
                 .forEach(([sideIdx, neigh]) => {
                     q.push({
                         id: neigh,
                         // center of neighbour is sqrt(3)*A length away at the given angle
-                        center: polarToCartesian(center, this.sideLen * Math.sqrt(3), sideIdx * Math.PI / 3)
+                        center: polarToCartesian(center, this.sideLen * Math.sqrt(3), parseInt(sideIdx) * Math.PI / 3)
                     });
                 });
         }
@@ -138,9 +145,14 @@ export default class HexagonalMesh extends React.Component {
      * drawn cells are omitted.
      */
     render() {
-        if (Object.keys(this.g).length > 0) {
-            const startCellId = Object.keys(this.g)[0];
-            const renderResult = this.renderMesh(this.g, startCellId);
+        if (this.cells.length > 0) {
+            const startCellId = this.cells[0].id;
+            
+            // build adjacency map
+            const g: Map<CellId, Neighbours> = new Map();
+            this.cells.forEach(cell => g.set(cell.id, cell.neighbours));
+
+            const renderResult = this.renderMesh(g, startCellId);
             console.log(renderResult);
             return (<svg className="svgbox" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             {[].concat(...renderResult)}</svg>);
